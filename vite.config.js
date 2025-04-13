@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'https://wims-z0uz.onrender.com',
+      '/api': 'https://wims-z0uz.onrender.com/',
     },
   },
 });
