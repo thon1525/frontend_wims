@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Pattern3 from "../assets/images/pattern_3.png";
-
+const API_URL = 'https://wims-z0uz.onrender.com';
 // Configure Axios
 axios.defaults.withCredentials = true;
 
@@ -49,7 +49,7 @@ export default function Login() {
     try {
       // Step 1: Login request
       const { data } = await axios.post(
-        "/api/token/",
+    `${API_URL}/api/token/`,
         { username, password, remember_me: rememberMe },
         { withCredentials: true }
       );
