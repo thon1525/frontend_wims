@@ -22,6 +22,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { UNIT_CHOICES } from "../utils/constants";
 
 // import * as XLSX from "xlsx";
+const API_URL = 'https://wims-z0uz.onrender.com';
 
 // Constants
 const API_ENDPOINTS = {
@@ -39,7 +40,7 @@ axios.defaults.withCredentials = true;
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(`${API_URL}${endpoint}`);
       setData(response.data);
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");

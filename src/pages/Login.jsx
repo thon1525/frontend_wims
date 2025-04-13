@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Pattern3 from "../assets/images/pattern_3.png";
-const API_URL = 'https://wims-z0uz.onrender.com';
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 // Configure Axios
 axios.defaults.withCredentials = true;
 
