@@ -1,0 +1,62 @@
+
+/* 8K Screens (6145px and up) */
+@media screen and (max-width: 7680px) {
+  html {
+      font-size: 120px;
+  }
+}
+
+/* 6K Screens (5121px and up) */
+@media screen and (max-width: 6144px) {
+  html {
+      font-size: 80px;
+  }
+}
+
+/* 5K Screens (3841px and up) */
+@media screen and (max-width: 5120px) {
+  html {
+      font-size: 65px;
+  }
+}
+
+/* 4K Screens (2049px and up) */
+@media screen and (max-width: 3840px) {
+  html {
+      font-size: 50px;
+  }
+}
+
+@media screen and (max-width: 2048px) {
+  html {
+      font-size: 30px;
+  }
+}
+
+@media screen and (max-width: 1400px) {
+  html {
+      font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 992px) {
+  html {
+      font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  html {
+      font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  html {
+      font-size: 16px;
+  }
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

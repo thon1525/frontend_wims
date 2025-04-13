@@ -1,0 +1,28 @@
+---Layout
+1. 
+2. update navbar - add mobile
+
+---Dashboard
+1. fix charts - and their responsiveness
+2. fix deal details table header style
+
+---Products
+1. product card flex the bottom section justify between
+2. resize hero h3
+3. product card heart icon
+
+---Favorites
+1. product card flex the bottom section justify between
+
+---inbox
+1. set the cursor pointer for the label checkboxes
+
+---GEN
+
+fix button, card custom props
+change the favorite star
+adjust font sizes
+function to calculate rating ??? frontend
+
+---STORE
+1. create a map for the pages name to dynamically render on page title
