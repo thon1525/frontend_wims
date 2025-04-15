@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Pattern3 from "../assets/images/pattern_3.png";
-const apiUrl = import.meta.env.VITE_API_URL || 'https://wims-z0uz.onrender.com';
 // Configure Axios
 axios.defaults.withCredentials = true;
-alert("API URL: " + apiUrl); // Debugging line
+const API_URL = import.meta.env.VITE_API_URL;
+
 // Utility to get cookie by name
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
@@ -30,7 +30,7 @@ export default function Login() {
     if (accessToken) {
       // If cookie exists, try to fetch protected data and redirect
       axios
-        .get("/api/user/", { withCredentials: true })
+        .get(`${API_URL}/api/user/`, { withCredentials: true })
         .then((response) => {
           setProtectedData(response.data);
           navigate("/dashboard");
@@ -49,7 +49,7 @@ export default function Login() {
     try {
       // Step 1: Login request
       const { data } = await axios.post(
-    `${apiUrl}/api/token/`,
+    `${API_URL}/api/token/`,
         { username, password, remember_me: rememberMe },
         { withCredentials: true }
       );

@@ -21,8 +21,8 @@ import ExportExcel from "../components/ExportExcel";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { UNIT_CHOICES } from "../utils/constants";
 
-// import * as XLSX from "xlsx";
-const API_URL = 'https://wims-z0uz.onrender.com';
+// Define API_URL with a fallback
+const API_URL = import.meta.env.VITE_API_URL ;
 
 // Constants
 const API_ENDPOINTS = {
@@ -30,7 +30,6 @@ const API_ENDPOINTS = {
   CATEGORIES: "/api/categories/",
   SUPPLIERS: "/api/suppliers/",
   IMPORT_EXCEL: "/api/products/import-excel/",
-  // UNIT_CHOICES: "/api/products/unit-choices/", 
 };
 
 // Axios Config
@@ -50,7 +49,7 @@ const useApiFetch = (endpoint, setData, setError) => {
   return fetchData;
 };
 
-// Excel Import Logic (Moved to a separate utility function)
+// Excel Import Logic
 const handleImportExcel = async (event, setLoading, setError, fetchProducts, fileInputRef) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -60,23 +59,23 @@ const handleImportExcel = async (event, setLoading, setError, fetchProducts, fil
 
   try {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
-    const response = await axios.post(API_ENDPOINTS.IMPORT_EXCEL, formData, {
+    const response = await axios.post(`${API_URL}${API_ENDPOINTS.IMPORT_EXCEL}`, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
 
-    await fetchProducts();  // Refresh product list
+    await fetchProducts();
 
     if (response.data.errors) {
-      const errorDetails = response.data.errors.map(err => 
-        `Row ${err.row}: ${err.error || JSON.stringify(err.errors)}`
-      ).join('; ');
+      const errorDetails = response.data.errors
+        .map((err) => `Row ${err.row}: ${err.error || JSON.stringify(err.errors)}`)
+        .join("; ");
       setError(`Imported ${response.data.created} products with errors: ${errorDetails}`);
     } else {
-      setError(null);  // Clear any previous errors
+      setError(null);
       console.log(`Successfully imported ${response.data.created} products`);
     }
   } catch (err) {
@@ -87,6 +86,7 @@ const handleImportExcel = async (event, setLoading, setError, fetchProducts, fil
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 };
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -98,16 +98,16 @@ const Products = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [unitChoices] = useState(UNIT_CHOICES);
-  const dt = useRef(null); // Ref for DataTable
-  const fileInputRef = useRef(null); // Ref for file input
-  console.log("this is ",products)
+  const dt = useRef(null);
+  const fileInputRef = useRef(null);
+
   const fetchProducts = useApiFetch(API_ENDPOINTS.PRODUCTS, setProducts, setError);
   const fetchCategories = useApiFetch(API_ENDPOINTS.CATEGORIES, setCategories, setError);
   const fetchSuppliers = useApiFetch(API_ENDPOINTS.SUPPLIERS, setSuppliers, setError);
-  // const fetchUnitChoices = useApiFetch(API_ENDPOINTS.UNIT_CHOICES, setUnitChoices, setError); // Optional
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchProducts(), fetchCategories(), fetchSuppliers(),]).finally(() =>
+    Promise.all([fetchProducts(), fetchCategories(), fetchSuppliers()]).finally(() =>
       setLoading(false)
     );
   }, [fetchProducts, fetchCategories, fetchSuppliers]);
@@ -131,12 +131,11 @@ const Products = () => {
     setFilteredProducts(filtered);
   }, [searchTerm, products]);
 
-  // Wrap handleImportExcel in a callback with proper arguments
   const onImportExcel = useCallback(
     (event) => {
       handleImportExcel(event, setLoading, setError, fetchProducts, fileInputRef);
     },
-    [fetchProducts] // Only fetchProducts is a dependency since others are stable
+    [fetchProducts]
   );
 
   const exportCSV = () => {
@@ -147,8 +146,8 @@ const Products = () => {
     async (formData) => {
       try {
         const url = currentProduct
-          ? `${API_ENDPOINTS.PRODUCTS}${currentProduct.product_id}/`
-          : API_ENDPOINTS.PRODUCTS;
+          ? `${API_URL}${API_ENDPOINTS.PRODUCTS}${currentProduct.product_id}/`
+          : `${API_URL}${API_ENDPOINTS.PRODUCTS}`;
         const method = currentProduct ? "put" : "post";
         await axios({
           method,
@@ -165,15 +164,18 @@ const Products = () => {
     [currentProduct, fetchProducts]
   );
 
-  const handleDelete = useCallback(async (productId) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
-    try {
-      await axios.delete(`${API_ENDPOINTS.PRODUCTS}${productId}/`);
-      setProducts((prev) => prev.filter((product) => product.product_id !== productId));
-    } catch (error) {
-      setError(error.response?.data?.detail || error.message || "Failed to delete product");
-    }
-  }, []);
+  const handleDelete = useCallback(
+    async (productId) => {
+      if (!window.confirm("Are you sure you want to delete this product?")) return;
+      try {
+        await axios.delete(`${API_URL}${API_ENDPOINTS.PRODUCTS}${productId}/`);
+        setProducts((prev) => prev.filter((product) => product.product_id !== productId));
+      } catch (error) {
+        setError(error.response?.data?.detail || error.message || "Failed to delete product");
+      }
+    },
+    []
+  );
 
   const openModal = (product = null) => {
     setCurrentProduct(product);
@@ -260,8 +262,20 @@ const Products = () => {
     { field: "quantity", header: "Quantity", sortable: true, style: { width: "10%" } },
     { field: "category_name", header: "Category", sortable: true, style: { width: "15%" } },
     { field: "supplier_name", header: "Supplier", sortable: true, style: { width: "15%" } },
-    { field: "unit_type", header: "Unit Type", sortable: true, filter: true, style: { width: "20%" } },
-    { field: "is_active", header: "Status", body: isActiveBodyTemplate, sortable: true, style: { width: "10%" } },
+    {
+      field: "unit_type",
+      header: "Unit Type",
+      sortable: true,
+      filter: true,
+      style: { width: "20%" },
+    },
+    {
+      field: "is_active",
+      header: "Status",
+      body: isActiveBodyTemplate,
+      sortable: true,
+      style: { width: "10%" },
+    },
     {
       field: "created_at",
       header: "Created At",
@@ -283,7 +297,7 @@ const Products = () => {
       <input
         type="file"
         ref={fileInputRef}
-        onChange={onImportExcel} // Use the wrapped handler
+        onChange={onImportExcel}
         accept=".xlsx, .xls"
         style={{ display: "none" }}
       />
