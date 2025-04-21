@@ -39,7 +39,10 @@ axios.defaults.withCredentials = true;
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_URL}${endpoint}`);
+      const url=`${API_URL}${endpoint}`;
+      alert(url)
+      
+      const response = await axios.get(url);
       
       setData(response.data);
     } catch (error) {
