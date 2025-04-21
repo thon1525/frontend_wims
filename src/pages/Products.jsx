@@ -40,6 +40,7 @@ const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}${endpoint}`);
+      
       setData(response.data);
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");
@@ -158,6 +159,7 @@ const Products = () => {
         await fetchProducts();
         closeModal();
       } catch (error) {
+        console.log("error this code",error)
         setError(error.response?.data?.detail || error.message || "Failed to save product");
       }
     },

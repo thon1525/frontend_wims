@@ -17,10 +17,11 @@ import PagesTitle from "../components/PagesTitle";
 
 // Axios Config
 axios.defaults.withCredentials = true;
+const API_URL = import.meta.env.VITE_API_URL ;
 
 // API Endpoints
 const API_ENDPOINTS = {
-  CATEGORIES: "/api/categories/",
+  CATEGORIES: `${API_URL}/api/categories/`,
 };
 
 // Custom Hook for API Fetching

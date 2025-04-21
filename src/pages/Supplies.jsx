@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import axios from "axios";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import PagesTitle from "../components/PagesTitle";
@@ -8,6 +9,11 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import moment from "moment";
+
+// Enable credentials for Axios requests (e.g., for cookies or auth)
+axios.defaults.withCredentials = true;
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Supplies = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -21,11 +27,8 @@ const Supplies = () => {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch("/api/suppliers/");
-      if (!response.ok) throw new Error("Failed to fetch suppliers");
-
-      const data = await response.json();
-      setSuppliers(data);
+      const response = await axios.get(`${API_URL}/api/suppliers/`);
+      setSuppliers(response.data);
     } catch (error) {
       console.error("Error fetching suppliers:", error);
     }
@@ -33,20 +36,17 @@ const Supplies = () => {
 
   const handleAddSupplier = async () => {
     try {
-      const method = currentSupplier ? "PUT" : "POST";
-      const url = currentSupplier ? `/api/suppliers/${currentSupplier.id}/` : "/api/suppliers/";
-
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSupplier),
-      });
-
-      if (!response.ok) throw new Error(`Failed to ${currentSupplier ? "update" : "add"} supplier`);
+      const url = currentSupplier
+        ? `${API_URL}/api/suppliers/${currentSupplier.id}/`
+        : `${API_URL}/api/suppliers/`;
+      const response = currentSupplier
+        ? await axios.put(url, newSupplier)
+        : await axios.post(url, newSupplier);
 
       await fetchSuppliers(); // Refresh data
       closeModal();
     } catch (error) {
+      console.log("error ", error);
       console.error(`Error ${currentSupplier ? "updating" : "adding"} supplier:`, error);
     }
   };
@@ -61,9 +61,7 @@ const Supplies = () => {
     if (!window.confirm("Are you sure you want to delete this supplier?")) return;
 
     try {
-      const response = await fetch(`/api/suppliers/${id}/`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete supplier");
-
+      await axios.delete(`${API_URL}/api/suppliers/${id}/`);
       setSuppliers(suppliers.filter((supplier) => supplier.id !== id));
     } catch (error) {
       console.error("Error deleting supplier:", error);
@@ -98,7 +96,6 @@ const Supplies = () => {
       {/* Suppliers Table */}
       <Card classNames="relative px-4 py-5 sm:p-6">
         <h2 className="text-xl font-bold mb-4">Suppliers</h2>
-
         <DataTable
           value={suppliers}
           paginator
@@ -106,8 +103,20 @@ const Supplies = () => {
           rowsPerPageOptions={[5, 10, 25, 50]}
           tableStyle={{ minWidth: "50rem" }}
         >
-          <Column field="name_company" header="Company Name" sortable filter style={{ width: "30%" }} />
-          <Column field="description" header="Description" sortable filter style={{ width: "40%" }} />
+          <Column
+            field="name_company"
+            header="Company Name"
+            sortable
+            filter
+            style={{ width: "30%" }}
+          />
+          <Column
+            field="description"
+            header="Description"
+            sortable
+            filter
+            style={{ width: "40%" }}
+          />
           <Column
             field="created_at"
             header="Created At"
@@ -122,7 +131,6 @@ const Supplies = () => {
             body={(rowData) => moment(rowData.updated_at).format("LL")}
             style={{ width: "15%" }}
           />
-          {/* Action Column for Update and Delete */}
           <Column
             body={(rowData) => (
               <div className="flex gap-2">
@@ -164,7 +172,6 @@ const Supplies = () => {
             className="p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500"
             placeholder="Enter company name"
           />
-
           <label className="font-medium">Description</label>
           <InputTextarea
             value={newSupplier.description}
@@ -173,8 +180,6 @@ const Supplies = () => {
             rows={3}
             placeholder="Enter description"
           />
-
-          {/* Action Buttons */}
           <div className="flex justify-end gap-2">
             <Button
               classNames="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition"
