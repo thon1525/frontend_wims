@@ -14,7 +14,8 @@ import "primeicons/primeicons.css";
 import Card from "../ui/Card"; // Adjust path as needed
 import Button from "../ui/Button"; // Adjust path as needed
 import PagesTitle from "../components/PagesTitle"; // Adjust path as needed
-
+// Define API_URL with a fallback
+const API_URL = import.meta.env.VITE_API_URL ;
 // Constants
 const API_ENDPOINTS = {
   LOCATIONS: "/api/warehouse-locations/",
@@ -85,8 +86,8 @@ const WarehouseLocations = () => {
     async (formData) => {
       try {
         const url = currentLocation
-          ? `${API_ENDPOINTS.LOCATIONS}${currentLocation.id}/`
-          : API_ENDPOINTS.LOCATIONS;
+          ? `${API_URL}${API_ENDPOINTS.LOCATIONS}${currentLocation.id}/`
+          :    `${API_URL}${API_ENDPOINTS.LOCATIONS}`;
         const method = currentLocation ? "put" : "post";
         const response = await axios({
           method,
@@ -114,7 +115,7 @@ const WarehouseLocations = () => {
       if (!window.confirm("Are you sure you want to delete this location?"))
         return;
       try {
-        await axios.delete(`${API_ENDPOINTS.LOCATIONS}${locationId}/`);
+        await axios.delete(`${API_URL}${API_ENDPOINTS.LOCATIONS}${locationId}/`);
         setLocations((prev) => prev.filter((loc) => loc.id !== locationId));
       } catch (error) {
         setError(

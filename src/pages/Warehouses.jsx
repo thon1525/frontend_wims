@@ -21,6 +21,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { UNIT_CHOICES } from "../utils/constants";
 
 // import * as XLSX from "xlsx";
+const API_URL = import.meta.env.VITE_API_URL ;
 
 // Constants
 const API_ENDPOINTS = {
@@ -144,8 +145,8 @@ const Warehouses  = () => {
     async (formData) => {
       try {
         const url = currentProduct
-          ? `${API_ENDPOINTS.WAREHOUSES}${currentProduct.warehouse_id}/`
-          : API_ENDPOINTS.WAREHOUSES;
+          ? `${API_URL}${API_ENDPOINTS.WAREHOUSES}${currentProduct.warehouse_id}/`
+          : `${API_URL}${API_ENDPOINTS.WAREHOUSES}`;
         const method = currentProduct ? "put" : "post";
         await axios({
           method,
@@ -165,7 +166,7 @@ const Warehouses  = () => {
   const handleDelete = useCallback(async (WarehouseId) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
     try {
-      await axios.delete(`${API_ENDPOINTS.WAREHOUSES}${WarehouseId}/`);
+      await axios.delete(`${API_URL}${API_ENDPOINTS.WAREHOUSES}${WarehouseId}/`);
       setProducts((prev) => prev.filter((product) => product.warehouse_id !== WarehouseId));
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to delete product");
