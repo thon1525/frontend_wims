@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -33,31 +32,24 @@ export default function Login() {
     setError(null);
 
     try {
-      // Login request
-      const { data } = await axios.post(
+      const response = await axios.post(
         `${API_URL}/api/token/`,
         { username, password },
         { withCredentials: true }
       );
-      console.log("Login successful:", data);
+      console.log("Login response:", response);
+      console.log("Cookies after login:", document.cookie); // Note: HttpOnly cookies won't appear here
 
-      // Fetch protected data
       const protectedResponse = await axios.get(`${API_URL}/api/user/`, {
         withCredentials: true,
       });
       console.log("Protected data:", protectedResponse.data);
 
-      // Navigate to dashboard
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
-      if (err.response) {
-        setError(err.response.data.detail || "Invalid credentials");
-      } else if (err.request) {
-        setError("No response from server. Check your connection.");
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      console.log("Response headers:", err.response?.headers);
+      setError(err.response?.data?.detail || "Invalid credentials");
     } finally {
       setLoading(false);
     }
@@ -83,7 +75,10 @@ export default function Login() {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-900">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-900"
+              >
                 Username
               </label>
               <input
@@ -101,10 +96,16 @@ export default function Login() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-900">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-900"
+                >
                   Password
                 </label>
-                <a href="#" className="text-sm text-opacity-60 hover:text-indigo-500">
+                <a
+                  href="#"
+                  className="text-sm text-opacity-60 hover:text-indigo-500"
+                >
                   Forgot password?
                 </a>
               </div>
@@ -124,7 +125,9 @@ export default function Login() {
               type="submit"
               disabled={loading}
               className={`flex w-full justify-center rounded-md px-3 py-1.5 text-sm font-semibold text-white shadow-sm ${
-                loading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500"
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500"
               } focus:outline-none`}
             >
               {loading ? "Signing in..." : "Sign in"}
@@ -132,7 +135,10 @@ export default function Login() {
 
             <p className="mt-10 text-center text-sm text-gray-500">
               Don’t have an account?
-              <Link to="/sign-up" className="ml-1 font-semibold text-[#5A8CFF] hover:text-indigo-500">
+              <Link
+                to="/sign-up"
+                className="ml-1 font-semibold text-[#5A8CFF] hover:text-indigo-500"
+              >
                 Create Account
               </Link>
             </p>
