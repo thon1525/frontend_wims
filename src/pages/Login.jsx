@@ -6,7 +6,7 @@ import Pattern3 from "../assets/images/pattern_3.png";
 
 // Configure Axios
 axios.defaults.withCredentials = true;
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "https://wims-z0uz.onrender.com";
 
 export default function Login() {
   const [username, setUsername] = useState("");
