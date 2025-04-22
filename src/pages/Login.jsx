@@ -3,42 +3,28 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Pattern3 from "../assets/images/pattern_3.png";
+
 // Configure Axios
 axios.defaults.withCredentials = true;
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Utility to get cookie by name
-const getCookie = (name) => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
-  return null;
-};
-
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [protectedData, setProtectedData] = useState(null);
   const navigate = useNavigate();
 
-  // Check for existing cookie on mount
+  // Check for existing authentication on mount
   useEffect(() => {
-    const accessToken = getCookie("access_token");
-    if (accessToken) {
-      // If cookie exists, try to fetch protected data and redirect
-      axios
-        .get(`${API_URL}/api/user/`, { withCredentials: true })
-        .then((response) => {
-          setProtectedData(response.data);
-          navigate("/dashboard");
-        })
-        .catch((err) => {
-          console.error("Auto-login failed:", err);
-        });
-    }
+    axios
+      .get(`${API_URL}/api/user/`, { withCredentials: true })
+      .then((response) => {
+        navigate("/dashboard");
+      })
+      .catch((err) => {
+        console.error("Auto-login failed:", err);
+      });
   }, [navigate]);
 
   const handleLogin = async (event) => {
@@ -47,26 +33,18 @@ export default function Login() {
     setError(null);
 
     try {
-      // Step 1: Login request
+      // Login request
       const { data } = await axios.post(
-    `${API_URL}/api/token/`,
-        { username, password, remember_me: rememberMe },
+        `${API_URL}/api/token/`,
+        { username, password },
         { withCredentials: true }
       );
       console.log("Login successful:", data);
 
-      if (!rememberMe) {
-        // If "Remember Me" is unchecked, store token in memory
-        localStorage.setItem("access_token", data.access); // Temporary storage (or use state/context)
-      }
-
-      // Step 2: Fetch protected data
-      const config = rememberMe
-        ? { withCredentials: true } // Use cookies
-        : { headers: { Authorization: `Bearer ${data.access}` } }; // Use token directly
-
-      const protectedResponse = await axios.get("/api/user/", config);
-      setProtectedData(protectedResponse.data);
+      // Fetch protected data
+      const protectedResponse = await axios.get(`${API_URL}/api/user/`, {
+        withCredentials: true,
+      });
       console.log("Protected data:", protectedResponse.data);
 
       // Navigate to dashboard
@@ -142,20 +120,6 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-              />
-              <label htmlFor="remember-me" className="ml-3 text-sm text-gray-900">
-                Remember me
-              </label>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -173,13 +137,6 @@ export default function Login() {
               </Link>
             </p>
           </form>
-
-          {protectedData && (
-            <div className="mt-6 p-4 bg-gray-100 rounded">
-              <h3 className="text-sm font-bold">Protected Data:</h3>
-              <pre className="text-xs">{JSON.stringify(protectedData, null, 2)}</pre>
-            </div>
-          )}
         </div>
       </div>
     </div>
