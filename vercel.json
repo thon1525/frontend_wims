@@ -19,7 +19,7 @@
         },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://frontendwimssystem.vercel.app"
+          "value": "https://frontendwimssystem-jtin7gouy-horn-thorns-projects.vercel.app"
         },
         {
           "key": "Access-Control-Allow-Methods",
@@ -31,7 +31,7 @@
         },
         {
           "key": "Access-Control-Expose-Headers",
-          "value": "set-cookie"
+          "value": "set-cookie,content-type,authorization,x-csrftoken"
         }
       ]
     }

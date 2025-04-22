@@ -19,10 +19,12 @@ export default function Login() {
     axios
       .get(`${API_URL}/api/user/`, { withCredentials: true })
       .then((response) => {
+        console.log("Auto-login success:", response.data);
         navigate("/dashboard");
       })
       .catch((err) => {
         console.error("Auto-login failed:", err);
+        console.log("Auto-login error response:", err.response?.data);
       });
   }, [navigate]);
 
@@ -38,7 +40,8 @@ export default function Login() {
         { withCredentials: true }
       );
       console.log("Login response:", response);
-      console.log("Cookies after login:", document.cookie); // Note: HttpOnly cookies won't appear here
+      console.log("Response headers:", response.headers);
+      console.log("Cookies after login:", document.cookie); // Note: HttpOnly cookies won't appear
 
       const protectedResponse = await axios.get(`${API_URL}/api/user/`, {
         withCredentials: true,
@@ -48,7 +51,8 @@ export default function Login() {
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
-      console.log("Response headers:", err.response?.headers);
+      console.log("Error response:", err.response?.data);
+      console.log("Error headers:", err.response?.headers);
       setError(err.response?.data?.detail || "Invalid credentials");
     } finally {
       setLoading(false);
