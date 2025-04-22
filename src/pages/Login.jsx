@@ -6,7 +6,9 @@ import Pattern3 from "../assets/images/pattern_3.png";
 
 // Configure Axios
 axios.defaults.withCredentials = true;
-const API_URL = import.meta.env.VITE_API_URL;
+
+// Use environment variable for API URL
+const API_URL = import.meta.env.VITE_API_URL || "https://wims-z0uz.onrender.com";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -15,7 +17,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check for existing authentication on mount
+  // Check for existing authentication
   useEffect(() => {
     axios
       .get(`${API_URL}/api/user/`, { withCredentials: true })
@@ -39,7 +41,7 @@ export default function Login() {
         { username, password },
         { withCredentials: true }
       );
-      console.log("Login successful:", data.data);
+      console.log("Login successful:", data);
 
       // Fetch protected data
       const protectedResponse = await axios.get(`${API_URL}/api/user/`, {
@@ -47,17 +49,13 @@ export default function Login() {
       });
       console.log("Protected data:", protectedResponse.data);
 
-      // Navigate to dashboard
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
-      if (err.response) {
-        setError(err.response.data.detail || "Invalid credentials");
-      } else if (err.request) {
-        setError("No response from server. Check your connection.");
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      setError(
+        err.response?.data?.detail ||
+          "Invalid credentials or server error"
+      );
     } finally {
       setLoading(false);
     }
