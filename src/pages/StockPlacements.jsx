@@ -19,6 +19,8 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import ProductsPDF from "../components/ProductsPDF";
 
 axios.defaults.withCredentials = true;
+const API_URL = import.meta.env.VITE_API_URL ;
+
 const API_ENDPOINTS = {
   PRODUCTS: "/api/products/",
   WAREHOUSES: "/api/warehouses/",
@@ -31,7 +33,7 @@ const API_ENDPOINTS = {
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(`${API_URL}${endpoint}`);
       // Ensure response.data is an array; normalize if necessary
       const data = Array.isArray(response.data) ? response.data : [];
       setData(data);
@@ -94,8 +96,8 @@ const StockPlacements = () => {
     async (formData) => {
       try {
         const url = currentStock
-          ? `${API_ENDPOINTS.STOCK_PLACEMENTS}${currentStock.stock_id}/`
-          : API_ENDPOINTS.STOCK_PLACEMENTS;
+          ? `${API_URL}${API_ENDPOINTS.STOCK_PLACEMENTS}${currentStock.stock_id}/`
+          :  `${API_URL}${API_ENDPOINTS.STOCK_PLACEMENTS}`;
         const method = currentStock ? "put" : "post";
         await axios({
           method,
@@ -114,7 +116,7 @@ const StockPlacements = () => {
   const handleDelete = useCallback(async (stockId) => {
     if (!window.confirm("Are you sure you want to delete this stock placement?")) return;
     try {
-      await axios.delete(`${API_ENDPOINTS.STOCK_PLACEMENTS}${stockId}/`);
+      await axios.delete(`${API_URL}${API_ENDPOINTS.STOCK_PLACEMENTS}${stockId}/`);
       setStockPlacements((prev) => prev.filter((stock) => stock.stock_id !== stockId));
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to delete stock placement");
