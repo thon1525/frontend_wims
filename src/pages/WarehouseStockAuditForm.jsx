@@ -20,7 +20,6 @@ import PagesTitle from "../components/PagesTitle"; // Adjust path as needed
 axios.defaults.withCredentials = true;
 
 const API_URL = import.meta.env.VITE_API_URL;
-console.log("API_URL:", API_URL); // Debug API_URL
 
 // Constants
 const API_ENDPOINTS = {

@@ -1,4 +1,3 @@
-// src/components/CustomerManagement.jsx
 import { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { DataTable } from "primereact/datatable";
@@ -15,6 +14,27 @@ import "primeicons/primeicons.css";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import PagesTitle from "../components/PagesTitle";
+import React from "react";
+
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 text-red-700 rounded-md">
+          <h3>Something went wrong.</h3>
+          <p>{this.state.error?.message}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Constants
 const API_ENDPOINTS = {
@@ -23,13 +43,18 @@ const API_ENDPOINTS = {
 
 // Axios Config
 axios.defaults.withCredentials = true;
-
+const API_URL = import.meta.env.VITE_API_URL ;
 // Custom Hook for API Fetching
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
-      setData(response.data);
+      const response = await axios.get(`${API_URL}${endpoint}`);
+      // Validate response data
+      if (Array.isArray(response.data)) {
+        setData(response.data);
+      } else {
+        throw new Error("Invalid API response: Expected an array");
+      }
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");
     }
@@ -52,16 +77,19 @@ const CustomerManagement = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetchCustomers().finally(() => setLoading(false));
+    fetchCustomers().finally(() => {
+      console.log("Fetched customers:", customers);
+      setLoading(false);
+    });
   }, [fetchCustomers]);
 
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredCustomers(customers);
+      setFilteredCustomers(Array.isArray(customers) ? customers : []);
       return;
     }
     const lowercasedSearch = searchTerm.toLowerCase();
-    const filtered = customers.filter((customer) =>
+    const filtered = (Array.isArray(customers) ? customers : []).filter((customer) =>
       [
         customer.full_name,
         customer.email,
@@ -81,8 +109,8 @@ const CustomerManagement = () => {
     async (formData) => {
       try {
         const url = currentCustomer
-          ? `${API_ENDPOINTS.CUSTOMERS}${currentCustomer.customer_id}/`
-          : API_ENDPOINTS.CUSTOMERS;
+          ? `${API_URL}${API_ENDPOINTS.CUSTOMERS}${currentCustomer.customer_id}/`
+          : `${API_URL}${API_ENDPOINTS.CUSTOMERS}`;
         const method = currentCustomer ? "put" : "post";
         const response = await axios({
           method,
@@ -109,7 +137,7 @@ const CustomerManagement = () => {
     async (customerId) => {
       if (!window.confirm("Are you sure you want to delete this customer?")) return;
       try {
-        await axios.delete(`${API_ENDPOINTS.CUSTOMERS}${customerId}/`);
+        await axios.delete(`${API_URL}${API_ENDPOINTS.CUSTOMERS}${customerId}/`);
         setCustomers((prev) => prev.filter((c) => c.customer_id !== customerId));
       } catch (error) {
         setError(
@@ -172,81 +200,83 @@ const CustomerManagement = () => {
   );
 
   return (
-    <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
-      <div className="flex items-center justify-between">
-        <PagesTitle title="Customer Management" classNames="text-3xl font-bold text-gray-800" />
-        <Button
-          classNames="bg-indigo-600 text-white px-5 py-2 rounded-md flex items-center gap-2"
-          onClick={() => openModal()}
-        >
-          <i className="pi pi-plus" /> Add New Customer
-        </Button>
-      </div>
-
-      <Card classNames="p-6 bg-white shadow-md rounded-lg">
-        <Toolbar className="mb-4" right={rightToolbarTemplate} />
-
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">Customer List</h2>
-          <div className="w-1/4 relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <i className="pi pi-search"></i>
-            </span>
-            <InputText
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Keyword Search"
-              className="w-full border-2 border-gray-300 rounded-md pl-10 p-2"
-              aria-label="Search customers"
-            />
-          </div>
+    <ErrorBoundary>
+      <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-between">
+          <PagesTitle title="Customer Management" classNames="text-3xl font-bold text-gray-800" />
+          <Button
+            classNames="bg-indigo-600 text-white px-5 py-2 rounded-md flex items-center gap-2"
+            onClick={() => openModal()}
+          >
+            <i className="pi pi-plus" /> Add New Customer
+          </Button>
         </div>
 
-        {loading && (
-          <div className="flex justify-center items-center py-4">
-            <i className="pi pi-spin pi-spinner text-indigo-600 text-2xl" />
-            <span className="ml-2 text-gray-600">Loading...</span>
-          </div>
-        )}
-        {error && <p className="text-red-500 bg-red-50 p-3 rounded-md mb-4">{error}</p>}
-        <DataTable
-          ref={dt}
-          value={filteredCustomers}
-          paginator
-          rows={5}
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          tableStyle={{ minWidth: "50rem" }}
-          className="p-datatable-striped p-datatable-sm rounded-lg"
-          stripedRows
-          rowHover
-          responsiveLayout="scroll"
-          emptyMessage="No customers found."
-          exportFilename={`Customers_${moment().format("YYYYMMDD")}`}
-        >
-          {columns.map((col, index) => (
-            <Column key={index} {...col} bodyClassName="text-gray-600" />
-          ))}
-        </DataTable>
-      </Card>
+        <Card classNames="p-6 bg-white shadow-md rounded-lg">
+          <Toolbar className="mb-4" right={rightToolbarTemplate} />
 
-      <Dialog
-        visible={isModalOpen}
-        onHide={closeModal}
-        header={currentCustomer ? "Edit Customer" : "Add New Customer"}
-        modal
-        dismissableMask
-        closeOnEscape
-        style={{ width: "700px" }}
-        className="p-fluid shadow-lg rounded-lg"
-      >
-        <CustomerForm
-          customer={currentCustomer}
-          onSave={handleSaveCustomer}
-          onCancel={closeModal}
-          error={error}
-        />
-      </Dialog>
-    </div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800">Customer List</h2>
+            <div className="w-1/4 relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <i className="pi pi-search"></i>
+              </span>
+              <InputText
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Keyword Search"
+                className="w-full border-2 border-gray-300 rounded-md pl-10 p-2"
+                aria-label="Search customers"
+              />
+            </div>
+          </div>
+
+          {loading && (
+            <div className="flex justify-center items-center py-4">
+              <i className="pi pi-spin pi-spinner text-indigo-600 text-2xl" />
+              <span className="ml-2 text-gray-600">Loading...</span>
+            </div>
+          )}
+          {error && <p className="text-red-500 bg-red-50 p-3 rounded-md mb-4">{error}</p>}
+          <DataTable
+            ref={dt}
+            value={filteredCustomers}
+            paginator
+            rows={5}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            tableStyle={{ minWidth: "50rem" }}
+            className="p-datatable-striped p-datatable-sm rounded-lg"
+            stripedRows
+            rowHover
+            responsiveLayout="scroll"
+            emptyMessage="No customers found."
+            exportFilename={`Customers_${moment().format("YYYYMMDD")}`}
+          >
+            {columns.map((col, index) => (
+              <Column key={index} {...col} bodyClassName="text-gray-600" />
+            ))}
+          </DataTable>
+        </Card>
+
+        <Dialog
+          visible={isModalOpen}
+          onHide={closeModal}
+          header={currentCustomer ? "Edit Customer" : "Add New Customer"}
+          modal
+          dismissableMask
+          closeOnEscape
+          style={{ width: "700px" }}
+          className="p-fluid shadow-lg rounded-lg"
+        >
+          <CustomerForm
+            customer={currentCustomer}
+            onSave={handleSaveCustomer}
+            onCancel={closeModal}
+            error={error}
+          />
+        </Dialog>
+      </div>
+    </ErrorBoundary>
   );
 };
 
@@ -275,11 +305,6 @@ const CustomerForm = ({ customer, onSave, onCancel, error }) => {
       setFormData(initialFormData);
     }
   }, [customer]);
-
-  const handleChange = (field) => (e) => {
-    const value = e.target?.value ?? e.value;
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
 
   const handleSubmit = () => {
     const requiredFields = ["full_name"];
@@ -315,7 +340,7 @@ const CustomerForm = ({ customer, onSave, onCancel, error }) => {
           <InputText
             id="full_name"
             value={formData.full_name}
-            onChange={handleChange("full_name")}
+            onChange={(e) => setFormData((prev) => ({ ...prev, full_name: e.target.value }))}
             placeholder="Enter full name"
             required
             className="w-full px-4 p-[5px] rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 border-2"
@@ -328,7 +353,7 @@ const CustomerForm = ({ customer, onSave, onCancel, error }) => {
           <InputText
             id="email"
             value={formData.email}
-            onChange={handleChange("email")}
+            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
             placeholder="Enter email"
             type="email"
             className="w-full px-4 p-[5px] rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 border-2"
@@ -341,7 +366,7 @@ const CustomerForm = ({ customer, onSave, onCancel, error }) => {
           <InputText
             id="phone"
             value={formData.phone}
-            onChange={handleChange("phone")}
+            onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
             placeholder="Enter phone number"
             className="w-full px-4 p-[5px] rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 border-2"
           />
@@ -353,7 +378,7 @@ const CustomerForm = ({ customer, onSave, onCancel, error }) => {
           <InputText
             id="address"
             value={formData.address}
-            onChange={handleChange("address")}
+            onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
             placeholder="Enter address"
             className="w-full px-4 p-[5px] rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 border-2"
           />
@@ -366,7 +391,10 @@ const CustomerForm = ({ customer, onSave, onCancel, error }) => {
             id="account_status"
             value={formData.account_status}
             options={statusOptions}
-            onChange={(e) => setFormData((prev) => ({ ...prev, account_status: e.value }))}
+            onChange={(e) => {
+              console.log("Dropdown onChange e.value:", e.value);
+              setFormData((prev) => ({ ...prev, account_status: e.value }));
+            }}
             placeholder="Select status"
             className="w-full border-2 border-gray-300 rounded-md"
           />
