@@ -16,6 +16,12 @@ import Card from "../ui/Card"; // Adjust path as needed
 import Button from "../ui/Button"; // Adjust path as needed
 import PagesTitle from "../components/PagesTitle"; // Adjust path as needed
 
+// Axios Config
+axios.defaults.withCredentials = true;
+
+const API_URL = import.meta.env.VITE_API_URL;
+console.log("API_URL:", API_URL); // Debug API_URL
+
 // Constants
 const API_ENDPOINTS = {
   STOCK_AUDITS: "/api/stock-audits/",
@@ -24,17 +30,17 @@ const API_ENDPOINTS = {
   LOCATIONS: "/api/warehouse-locations/",
 };
 
-// Axios Config
-axios.defaults.withCredentials = true;
-
 // Custom Hook for API Fetching
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(endpoint);
-      setData(response.data);
+      console.log(`Response from ${endpoint}:`, response.data); // Debug API response
+      const data = Array.isArray(response.data) ? response.data : response.data.data || [];
+      setData(data);
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");
+      setData([]); // Set empty array on error
     }
   }, [endpoint, setData, setError]);
 
@@ -77,9 +83,9 @@ const WarehouseStockAudit = () => {
         audit.warehouse_name,
         audit.product_name,
         audit.location_name,
-        audit.recorded_quantity.toString(),
+        audit.recorded_quantity?.toString(),
         audit.audit_date,
-      ].some((field) => field?.toLowerCase().includes(lowercasedSearch))
+      ].some((field) => field?.toLowerCase?.().includes(lowercasedSearch))
     );
     setFilteredAudits(filtered);
   }, [searchTerm, audits]);
@@ -241,7 +247,7 @@ const WarehouseStockAudit = () => {
       </Card>
 
       <Dialog
-        visible={isModalOpen}
+        visible={isModalOpen && !loading} // Only show when not loading
         onHide={closeModal}
         header={currentAudit ? "Edit Audit" : "Add New Audit"}
         modal
@@ -266,6 +272,8 @@ const WarehouseStockAudit = () => {
 
 // Audit Form Component
 const AuditForm = ({ audit, warehouses, products, locations, onSave, onCancel, error }) => {
+  console.log("AuditForm props:", { warehouses, products, locations }); // Debug props
+
   const initialFormData = {
     warehouse: 0,
     product: 0,
@@ -310,7 +318,7 @@ const AuditForm = ({ audit, warehouses, products, locations, onSave, onCancel, e
     data.append("recorded_quantity", formData.recorded_quantity);
 
     for (let [key, value] of data.entries()) {
-      console.log(`${key}: ${value}`);
+      console.log(`${key}: ${value}`); // Debug FormData
     }
 
     onSave(data);
@@ -327,7 +335,11 @@ const AuditForm = ({ audit, warehouses, products, locations, onSave, onCancel, e
           <Dropdown
             id="warehouse"
             value={formData.warehouse}
-            options={warehouses.map((w) => ({ label: w.name, value: w.warehouse_id }))}
+            options={
+              Array.isArray(warehouses) && warehouses.length
+                ? warehouses.map((w) => ({ label: w.name, value: w.warehouse_id }))
+                : []
+            }
             onChange={(e) => setFormData((prev) => ({ ...prev, warehouse: e.value }))}
             placeholder="Select a warehouse"
             className="w-full border-2 border-gray-300 rounded-md"
@@ -340,7 +352,11 @@ const AuditForm = ({ audit, warehouses, products, locations, onSave, onCancel, e
           <Dropdown
             id="product"
             value={formData.product}
-            options={products.map((p) => ({ label: p.name, value: p.product_id }))}
+            options={
+              Array.isArray(products) && products.length
+                ? products.map((p) => ({ label: p.name, value: p.product_id }))
+                : []
+            }
             onChange={(e) => setFormData((prev) => ({ ...prev, product: e.value }))}
             placeholder="Select a product"
             className="w-full border-2 border-gray-300 rounded-md"
@@ -353,8 +369,13 @@ const AuditForm = ({ audit, warehouses, products, locations, onSave, onCancel, e
           <Dropdown
             id="location"
             value={formData.location}
-            options={locations.map((l) => ({ label: l.section_name, value: l.id }))}
+            options={
+              Array.isArray(locations) && locations.length
+                ? locations.map((l) => ({ label: l.section_name, value: l.id }))
+                : []
+            }
             onChange={(e) => setFormData((prev) => ({ ...prev, location: e.value }))}
+            vii
             placeholder="Select a location"
             className="w-full border-2 border-gray-300 rounded-md"
           />
