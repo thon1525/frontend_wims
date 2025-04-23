@@ -32,7 +32,7 @@ axios.defaults.withCredentials = true;
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(`${API_URL}${endpoint}`);
       setData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");
