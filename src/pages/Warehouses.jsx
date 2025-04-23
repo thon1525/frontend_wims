@@ -25,7 +25,7 @@ const API_ENDPOINTS = {
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(`${API_URL}${endpoint}`);
       console.log("API Response:", response.data);
       setData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
