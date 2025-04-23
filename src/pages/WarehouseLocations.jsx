@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { DataTable } from "primereact/datatable";
@@ -14,8 +15,10 @@ import "primeicons/primeicons.css";
 import Card from "../ui/Card"; // Adjust path as needed
 import Button from "../ui/Button"; // Adjust path as needed
 import PagesTitle from "../components/PagesTitle"; // Adjust path as needed
+
 // Define API_URL with a fallback
-const API_URL = import.meta.env.VITE_API_URL ;
+const API_URL = import.meta.env.VITE_API_URL;
+
 // Constants
 const API_ENDPOINTS = {
   LOCATIONS: "/api/warehouse-locations/",
@@ -30,7 +33,7 @@ const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(endpoint);
-      setData(response.data);
+      setData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");
     }
@@ -87,7 +90,7 @@ const WarehouseLocations = () => {
       try {
         const url = currentLocation
           ? `${API_URL}${API_ENDPOINTS.LOCATIONS}${currentLocation.id}/`
-          :    `${API_URL}${API_ENDPOINTS.LOCATIONS}`;
+          : `${API_URL}${API_ENDPOINTS.LOCATIONS}`;
         const method = currentLocation ? "put" : "post";
         const response = await axios({
           method,
@@ -265,7 +268,7 @@ const WarehouseLocations = () => {
 // Location Form Component
 const LocationForm = ({ location, warehouses, onSave, onCancel, error }) => {
   const initialFormData = {
-    warehouse: 0, // Changed to match API field name
+    warehouse: null,
     section_name: "",
     storage_type: "",
     capacity_class: "",
@@ -289,7 +292,7 @@ const LocationForm = ({ location, warehouses, onSave, onCancel, error }) => {
   useEffect(() => {
     if (location) {
       setFormData({
-        warehouse: location.warehouse || 0, // Use "warehouse" from API response
+        warehouse: location.warehouse || null,
         section_name: location.section_name || "",
         storage_type: location.storage_type || "",
         capacity_class: location.capacity_class || "",
@@ -304,7 +307,7 @@ const LocationForm = ({ location, warehouses, onSave, onCancel, error }) => {
     const value = e.target?.value ?? e.value;
     setFormData((prev) => ({
       ...prev,
-      [field]: field === "warehouse" ? parseInt(value) || 0 : value,
+      [field]: field === "warehouse" ? (value ? parseInt(value) : null) : value,
     }));
   };
 
@@ -335,6 +338,13 @@ const LocationForm = ({ location, warehouses, onSave, onCancel, error }) => {
     onSave(data);
   };
 
+  const warehouseOptions = Array.isArray(warehouses)
+    ? warehouses.map((w) => ({
+        label: w.name || "Unknown",
+        value: w.warehouse_id,
+      }))
+    : [];
+
   return (
     <div className="flex flex-col gap-6 p-6 bg-white rounded-lg">
       {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -346,12 +356,11 @@ const LocationForm = ({ location, warehouses, onSave, onCancel, error }) => {
           <Dropdown
             id="warehouse"
             value={formData.warehouse}
-            options={warehouses.map((w) => ({ label: w.name, value: w.warehouse_id }))}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, warehouse: e.value }))
-            }
-            placeholder="Select a warehouse"
+            options={warehouseOptions}
+            onChange={handleChange("warehouse")}
+            placeholder={warehouseOptions.length ? "Select a warehouse" : "Loading warehouses..."}
             className="w-full border-2 border-gray-300 rounded-md"
+            disabled={!warehouseOptions.length}
           />
         </div>
         <div className="field">

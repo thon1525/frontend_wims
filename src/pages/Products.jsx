@@ -40,7 +40,6 @@ const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
       const url=`${API_URL}${endpoint}`;
-      alert(url)
       
       const response = await axios.get(url);
       
