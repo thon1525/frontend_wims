@@ -1,4 +1,3 @@
-// src/components/PlaceOrder.jsx
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { InputText } from "primereact/inputtext";
@@ -9,6 +8,9 @@ import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
+
+axios.defaults.withCredentials = true;
+const API_URL = import.meta.env.VITE_API_URL ;
 const API_ENDPOINTS = {
   ORDERS: "/api/orders/",
   CUSTOMERS: "/api/customers/",
@@ -37,16 +39,19 @@ const PlaceOrder = () => {
       setLoading(true);
       try {
         const [custRes, prodRes, whRes, locRes] = await Promise.all([
-          axios.get(API_ENDPOINTS.CUSTOMERS),
-          axios.get(API_ENDPOINTS.PRODUCTS),
-          axios.get(API_ENDPOINTS.WAREHOUSES),
-          axios.get(API_ENDPOINTS.LOCATIONS),
+          axios.get(`${API_URL}${API_ENDPOINTS.CUSTOMERS}`),
+          axios.get(`${API_URL}${API_ENDPOINTS.PRODUCTS}`),
+          axios.get(`${API_URL}${API_ENDPOINTS.WAREHOUSES}`),
+          axios.get(`${API_URL}${API_ENDPOINTS.LOCATIONS}`),
         ]);
-        setCustomers(custRes.data);
-        setProducts(prodRes.data);
-        setWarehouses(whRes.data);
-        setLocations(locRes.data);
+
+        // Ensure data is an array, provide empty array as fallback
+        setCustomers(Array.isArray(custRes.data) ? custRes.data : []);
+        setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
+        setWarehouses(Array.isArray(whRes.data) ? whRes.data : []);
+        setLocations(Array.isArray(locRes.data) ? locRes.data : []);
       } catch (err) {
+        console.error("Error fetching data:", err);
         setError(err.message || "Failed to load data");
       } finally {
         setLoading(false);
@@ -98,13 +103,13 @@ const PlaceOrder = () => {
       items: formData.items.map(item => ({
         product: item.product.product_id,
         warehouse: item.warehouse.warehouse_id,
-        location: item.location.id, 
+        location: item.location.id,
         quantity: item.quantity,
       })),
     };
 
     try {
-      const response = await axios.post(API_ENDPOINTS.ORDERS, payload);
+      const response = await axios.post(`${API_URL}${API_ENDPOINTS.ORDERS}`, payload);
       setSuccess(`Order ${response.data.order_id} created successfully!`);
       setFormData({
         customer: null,
@@ -112,7 +117,7 @@ const PlaceOrder = () => {
         items: [{ product: null, warehouse: null, location: null, quantity: 1 }],
       });
     } catch (err) {
-        console.log("this error data",err);
+      console.error("Error placing order:", err);
       setError(err.response?.data?.error || "Failed to place order");
     } finally {
       setLoading(false);
@@ -132,10 +137,11 @@ const PlaceOrder = () => {
             <label className="font-semibold text-gray-700">Customer *</label>
             <Dropdown
               value={formData.customer}
-              options={customers.map(c => ({ label: c.full_name, value: c }))}
+              options={customers.map(c => ({ label: c.full_name || "Unknown", value: c }))}
               onChange={(e) => handleInputChange("customer", e.value)}
               placeholder="Select a customer"
               className="w-full mt-1"
+              disabled={loading || customers.length === 0}
             />
           </div>
           <div>
@@ -144,6 +150,7 @@ const PlaceOrder = () => {
               value={formData.pos_terminal_id}
               onChange={(e) => handleInputChange("pos_terminal_id", e.target.value)}
               className="w-full mt-1"
+              disabled={loading}
             />
           </div>
 
@@ -154,30 +161,33 @@ const PlaceOrder = () => {
                 <label className="font-semibold text-gray-700">Product *</label>
                 <Dropdown
                   value={item.product}
-                  options={products.map(p => ({ label: p.name, value: p }))}
+                  options={products.map(p => ({ label: p.name || "Unknown", value: p }))}
                   onChange={(e) => handleItemChange(index, "product", e.value)}
                   placeholder="Select a product"
                   className="w-full mt-1"
+                  disabled={loading || products.length === 0}
                 />
               </div>
               <div>
                 <label className="font-semibold text-gray-700">Warehouse *</label>
                 <Dropdown
                   value={item.warehouse}
-                  options={warehouses.map(w => ({ label: w.name, value: w }))}
+                  options={warehouses.map(w => ({ label: w.name || "Unknown", value: w }))}
                   onChange={(e) => handleItemChange(index, "warehouse", e.value)}
                   placeholder="Select a warehouse"
                   className="w-full mt-1"
+                  disabled={loading || warehouses.length === 0}
                 />
               </div>
               <div>
                 <label className="font-semibold text-gray-700">Location *</label>
                 <Dropdown
                   value={item.location}
-                  options={locations.map(l => ({ label: l.section_name, value: l }))}
+                  options={locations.map(l => ({ label: l.section_name || "Unknown", value: l }))}
                   onChange={(e) => handleItemChange(index, "location", e.value)}
                   placeholder="Select a location"
                   className="w-full mt-1"
+                  disabled={loading || locations.length === 0}
                 />
               </div>
               <div>
@@ -188,6 +198,7 @@ const PlaceOrder = () => {
                   onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
                   min={1}
                   className="w-full mt-1"
+                  disabled={loading}
                 />
               </div>
               {formData.items.length > 1 && (
@@ -196,6 +207,7 @@ const PlaceOrder = () => {
                   icon="pi pi-trash"
                   className="p-button-danger p-button-sm"
                   onClick={() => removeItem(index)}
+                  disabled={loading}
                 />
               )}
             </div>
@@ -206,17 +218,21 @@ const PlaceOrder = () => {
             icon="pi pi-plus"
             className="p-button-secondary p-button-sm mt-4"
             onClick={addItem}
+            disabled={loading}
           />
 
           <div className="flex justify-end gap-4 mt-6">
             <PrimeButton
               label="Cancel"
               className="p-button-outlined"
-              onClick={() => setFormData({
-                customer: null,
-                pos_terminal_id: "POS001",
-                items: [{ product: null, warehouse: null, location: null, quantity: 1 }],
-              })}
+              onClick={() =>
+                setFormData({
+                  customer: null,
+                  pos_terminal_id: "POS001",
+                  items: [{ product: null, warehouse: null, location: null, quantity: 1 }],
+                })
+              }
+              disabled={loading}
             />
             <PrimeButton
               label="Place Order"
