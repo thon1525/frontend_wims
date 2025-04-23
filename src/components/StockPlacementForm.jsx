@@ -9,6 +9,8 @@ import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
+axios.defaults.withCredentials = true;
+const API_URL = import.meta.env.VITE_API_URL ;
 const API_ENDPOINTS = {
   WAREHOUSES: "/api/warehouses/",
   PRODUCTS: "/api/products/",
@@ -50,7 +52,7 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
   // Fetch related data
   const fetchData = useCallback(async (endpoint, setData) => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(`${API_URL}${endpoint}`);
       setData(response.data);
     } catch (err) {
       setFormError(err.message || "Failed to fetch data");
