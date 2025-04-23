@@ -15,10 +15,10 @@ import Button from "../ui/Button";
 import PagesTitle from "../components/PagesTitle";
 import ExportExcel from "../components/ExportExcel";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import ProductsPDF from "../components/ProductsPDF"; // Reuse or create StockTransactionsPDF
-import StockTransactionForm from "../components/StockTransactionForm"; // Reuse or create StockTransactionsPDF
+import ProductsPDF from "../components/ProductsPDF";
+import StockTransactionForm from "../components/StockTransactionForm";
 axios.defaults.withCredentials = true;
-
+const API_URL = import.meta.env.VITE_API_URL ;
 const API_ENDPOINTS = {
     STOCK_PLACEMENTS: "/api/stock-placements/",
     STOCK_TRANSACTIONS: "/api/stock-transactions/",
@@ -27,10 +27,13 @@ const API_ENDPOINTS = {
 const useApiFetch = (endpoint, setData, setError) => {
     const fetchData = useCallback(async () => {
         try {
-            const response = await axios.get(endpoint);
-            setData(response.data);
+            const response = await axios.get(`${API_URL}${endpoint}`);
+            // Ensure response.data is an array; fallback to empty array if not
+            const data = Array.isArray(response.data) ? response.data : [];
+            setData(data);
         } catch (error) {
             setError(error.response?.data?.detail || error.message || "Failed to fetch data");
+            setData([]); // Set empty array on error
         }
     }, [endpoint, setData, setError]);
     return fetchData;
@@ -54,6 +57,10 @@ const StockTransactions = () => {
     }, [fetchTransactions]);
 
     useEffect(() => {
+        if (!Array.isArray(transactions)) {
+            setFilteredTransactions([]);
+            return;
+        }
         if (!searchTerm) {
             setFilteredTransactions(transactions);
             return;
@@ -61,10 +68,10 @@ const StockTransactions = () => {
         const lowercasedSearch = searchTerm.toLowerCase();
         const filtered = transactions.filter((transaction) =>
             [
-                transaction.product_name,
-                transaction.warehouse_name,
-                transaction.transaction_type,
-            ].some((field) => field?.toLowerCase().includes(lowercasedSearch))
+                transaction.product_name || "",
+                transaction.warehouse_name || "",
+                transaction.transaction_type || "",
+            ].some((field) => field.toLowerCase().includes(lowercasedSearch))
         );
         setFilteredTransactions(filtered);
     }, [searchTerm, transactions]);
@@ -73,8 +80,8 @@ const StockTransactions = () => {
         async (formData) => {
             try {
                 const url = currentTransaction
-                    ? `${API_ENDPOINTS.STOCK_TRANSACTIONS}${currentTransaction.transaction_id}/`
-                    : API_ENDPOINTS.STOCK_TRANSACTIONS;
+                    ? `${API_URL}${API_ENDPOINTS.STOCK_TRANSACTIONS}${currentTransaction.transaction_id}/`
+                    : `${API_URL}${API_ENDPOINTS.STOCK_TRANSACTIONS}`;
                 const method = currentTransaction ? "put" : "post";
                 await axios({
                     method,
@@ -93,7 +100,7 @@ const StockTransactions = () => {
     const handleDelete = useCallback(async (transactionId) => {
         if (!window.confirm("Are you sure you want to delete this transaction?")) return;
         try {
-            await axios.delete(`${API_ENDPOINTS.STOCK_TRANSACTIONS}${transactionId}/`);
+            await axios.delete(`${API_URL}${API_ENDPOINTS.STOCK_TRANSACTIONS}${transactionId}/`);
             setTransactions((prev) => prev.filter((t) => t.transaction_id !== transactionId));
         } catch (error) {
             setError(error.response?.data?.detail || error.message || "Failed to delete transaction");
@@ -134,7 +141,14 @@ const StockTransactions = () => {
         { field: "warehouse_name", header: "Warehouse", sortable: true, filter: true, style: { width: "20%" } },
         { field: "transaction_type", header: "Type", sortable: true, filter: true, style: { width: "15%" } },
         { field: "quantity", header: "Quantity", sortable: true, filter: true, style: { width: "10%" } },
-        { field: "transaction_date", header: "Date", sortable: true, filter: true, style: { width: "15%" }, body: (rowData) => moment(rowData.transaction_date).format("YYYY-MM-DD HH:mm") },
+        {
+            field: "transaction_date",
+            header: "Date",
+            sortable: true,
+            filter: true,
+            style: { width: "15%" },
+            body: (rowData) => moment(rowData.transaction_date).format("YYYY-MM-DD HH:mm"),
+        },
         { body: actionBodyTemplate, style: { width: "10%" } },
     ];
 
@@ -157,6 +171,9 @@ const StockTransactions = () => {
             </PDFDownloadLink>
         </div>
     );
+
+    // Ensure transactionsToDisplay is always an array
+    const transactionsToDisplay = Array.isArray(filteredTransactions) ? filteredTransactions : [];
 
     return (
         <div className="space-y-8 p-6 bg-gray-50 min-h-screen">
@@ -197,7 +214,7 @@ const StockTransactions = () => {
                 {error && <p className="text-red-500 bg-red-50 p-3 rounded-md mb-4">{error}</p>}
                 <DataTable
                     ref={dt}
-                    value={filteredTransactions}
+                    value={transactionsToDisplay}
                     paginator
                     rows={5}
                     rowsPerPageOptions={[5, 10, 25, 50]}

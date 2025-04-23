@@ -4,7 +4,8 @@ import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
 import axios from "axios";
-
+axios.defaults.withCredentials = true;
+const API_URL = import.meta.env.VITE_API_URL ;
 const API_ENDPOINTS = {
     STOCK_PLACEMENTS: "/api/stock-placements/",
     STOCK_TRANSACTIONS: "/api/stock-transactions/",
@@ -31,7 +32,7 @@ const StockTransactionForm = ({ transaction, onSave, onCancel, error }) => {
     useEffect(() => {
         const fetchStockPlacements = async () => {
             try {
-                const response = await axios.get(API_ENDPOINTS.STOCK_PLACEMENTS);
+                const response = await axios.get(`${API_URL}${API_ENDPOINTS.STOCK_PLACEMENTS}`);
                 setStockOptions(
                     response.data.map((stock) => ({
                         label: `${stock.product_name} - ${stock.warehouse_name}`,
