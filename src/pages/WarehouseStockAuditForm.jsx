@@ -34,8 +34,8 @@ const API_ENDPOINTS = {
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
-      console.log(`Response from ${endpoint}:`, response.data); // Debug API response
+      const response = await axios.get(`${API_URL}${endpoint}`);
+   
       const data = Array.isArray(response.data) ? response.data : response.data.data || [];
       setData(data);
     } catch (error) {
@@ -98,8 +98,8 @@ const WarehouseStockAudit = () => {
     async (formData) => {
       try {
         const url = currentAudit
-          ? `${API_ENDPOINTS.STOCK_AUDITS}${currentAudit.audit_id}/`
-          : API_ENDPOINTS.STOCK_AUDITS;
+          ? `${API_URL}${API_ENDPOINTS.STOCK_AUDITS}${currentAudit.audit_id}/`
+          : `${API_URL}${API_ENDPOINTS.STOCK_AUDITS}`;
         const method = currentAudit ? "put" : "post";
         const response = await axios({
           method,
@@ -126,7 +126,7 @@ const WarehouseStockAudit = () => {
     async (auditId) => {
       if (!window.confirm("Are you sure you want to delete this audit?")) return;
       try {
-        await axios.delete(`${API_ENDPOINTS.STOCK_AUDITS}${auditId}/`);
+        await axios.delete(`${API_URL}${API_ENDPOINTS.STOCK_AUDITS}${auditId}/`);
         setAudits((prev) => prev.filter((audit) => audit.audit_id !== auditId));
       } catch (error) {
         setError(
