@@ -16,10 +16,12 @@ import Card from "../ui/Card";
 import Button from "../ui/Button";
 import PagesTitle from "../components/PagesTitle";
 
+axios.defaults.withCredentials = true;
+const API_URL = import.meta.env.VITE_API_URL ;
 // Constants
 const API_ENDPOINTS = {
-  ACCOUNTS: "http://localhost:8000/api/customer-accounts/", // Adjust to your Django URL
-  CUSTOMERS: "http://localhost:8000/api/customers/",
+  ACCOUNTS: "/api/customer-accounts/", // Adjust to your Django URL
+  CUSTOMERS: "/api/customers/",
 };
 
 // Axios Config
@@ -28,7 +30,7 @@ axios.defaults.withCredentials = true;
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(`${API_URL}${endpoint}`);
       setData(response.data);
     } catch (error) {
       setError(error.response?.data?.detail || error.message || "Failed to fetch data");
@@ -77,8 +79,8 @@ const CustomerAccounts = () => {
     async (formData) => {
       try {
         const url = currentAccount
-          ? `${API_ENDPOINTS.ACCOUNTS}${currentAccount.account_id}/`
-          : API_ENDPOINTS.ACCOUNTS;
+          ? `${API_URL}${API_ENDPOINTS.ACCOUNTS}${currentAccount.account_id}/`
+          : `${API_URL}${API_ENDPOINTS.ACCOUNTS}`;
         const method = currentAccount ? "put" : "post";
         const response = await axios({ method, url, data: formData });
         console.log("Account saved:", response.data);
@@ -95,7 +97,7 @@ const CustomerAccounts = () => {
     async (accountId) => {
       if (!window.confirm("Are you sure you want to delete this account?")) return;
       try {
-        await axios.delete(`${API_ENDPOINTS.ACCOUNTS}${accountId}/`);
+        await axios.delete(`${API_URL}${API_ENDPOINTS.ACCOUNTS}${accountId}/`);
         setAccounts((prev) => prev.filter((account) => account.account_id !== accountId));
       } catch (error) {
         setError(error.response?.data?.detail || error.message || "Failed to delete account");
