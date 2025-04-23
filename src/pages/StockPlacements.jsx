@@ -13,27 +13,36 @@ import "primeicons/primeicons.css";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import PagesTitle from "../components/PagesTitle";
-import StockPlacementForm from "../components/StockPlacementForm"; // New form component
+import StockPlacementForm from "../components/StockPlacementForm";
 import ExportExcel from "../components/ExportExcel";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import ProductsPDF from "../components/ProductsPDF"; // Reuse or create StockPlacementPDF
+import ProductsPDF from "../components/ProductsPDF";
 
 axios.defaults.withCredentials = true;
 const API_ENDPOINTS = {
-    PRODUCTS: "/api/products/",
-    WAREHOUSES: "/api/warehouses/",
-    CATEGORIES: "/api/categories/",
-    SUPPLIERS: "/api/suppliers/",
-    STOCK_PLACEMENTS: "/api/stock-placements/",
-    IMPORT_EXCEL: "/api/products/import-excel/",
-  };
+  PRODUCTS: "/api/products/",
+  WAREHOUSES: "/api/warehouses/",
+  CATEGORIES: "/api/categories/",
+  SUPPLIERS: "/api/suppliers/",
+  STOCK_PLACEMENTS: "/api/stock-placements/",
+  IMPORT_EXCEL: "/api/products/import-excel/",
+};
+
 const useApiFetch = (endpoint, setData, setError) => {
   const fetchData = useCallback(async () => {
     try {
       const response = await axios.get(endpoint);
-      setData(response.data);
+      // Ensure response.data is an array; normalize if necessary
+      const data = Array.isArray(response.data) ? response.data : [];
+      setData(data);
+      // Optional: Log the data for debugging
+      console.log("Fetched stock placements:", data);
     } catch (error) {
-      setError(error.response?.data?.detail || error.message || "Failed to fetch data");
+      const errorMessage = error.response?.data?.detail || error.message || "Failed to fetch data";
+      setError(errorMessage);
+      // Set an empty array to prevent invalid state
+      setData([]);
+      console.error("Error fetching data:", errorMessage);
     }
   }, [endpoint, setData, setError]);
   return fetchData;
@@ -57,10 +66,17 @@ const StockPlacements = () => {
   }, [fetchStockPlacements]);
 
   useEffect(() => {
+    // Ensure stockPlacements is an array before filtering
+    if (!Array.isArray(stockPlacements)) {
+      setFilteredStockPlacements([]);
+      return;
+    }
+
     if (!searchTerm) {
       setFilteredStockPlacements(stockPlacements);
       return;
     }
+
     const lowercasedSearch = searchTerm.toLowerCase();
     const filtered = stockPlacements.filter((stock) =>
       [
@@ -69,7 +85,7 @@ const StockPlacements = () => {
         stock.location_section,
         stock.batch_number,
         stock.storage_type,
-      ].some((field) => field?.toLowerCase().includes(lowercasedSearch))
+      ].some((field) => field?.toLowerCase?.().includes(lowercasedSearch))
     );
     setFilteredStockPlacements(filtered);
   }, [searchTerm, stockPlacements]);
@@ -149,7 +165,7 @@ const StockPlacements = () => {
         label="CSV"
         icon="pi pi-file"
         className="p-button-outlined p-button-secondary"
-        onClick={() => dt.current.exportCSV()}
+        onClick={() => dt.current?.exportCSV()}
       />
       <ExportExcel products={filteredStockPlacements} onError={setError} />
       <PDFDownloadLink
@@ -202,7 +218,7 @@ const StockPlacements = () => {
         {error && <p className="text-red-500 bg-red-50 p-3 rounded-md mb-4">{error}</p>}
         <DataTable
           ref={dt}
-          value={filteredStockPlacements}
+          value={filteredStockPlacements || []} // Fallback to empty array
           paginator
           rows={5}
           rowsPerPageOptions={[5, 10, 25, 50]}
