@@ -8,15 +8,15 @@ import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
-
 axios.defaults.withCredentials = true;
-const API_URL = import.meta.env.VITE_API_URL ;
+const API_URL = import.meta.env.VITE_API_URL;
 const API_ENDPOINTS = {
   ORDERS: "/api/orders/",
   CUSTOMERS: "/api/customers/",
   PRODUCTS: "/api/products/",
   WAREHOUSES: "/api/warehouses/",
   LOCATIONS: "/api/warehouse-locations/",
+  STOCK_PLACEMENTS: "/api/stock-placements/",
 };
 
 const PlaceOrder = () => {
@@ -45,7 +45,6 @@ const PlaceOrder = () => {
           axios.get(`${API_URL}${API_ENDPOINTS.LOCATIONS}`),
         ]);
 
-        // Ensure data is an array, provide empty array as fallback
         setCustomers(Array.isArray(custRes.data) ? custRes.data : []);
         setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
         setWarehouses(Array.isArray(whRes.data) ? whRes.data : []);
@@ -60,6 +59,43 @@ const PlaceOrder = () => {
     fetchData();
   }, []);
 
+  // Check stock availability using STOCK_PLACEMENTS endpoint
+  const checkStock = async (items) => {
+    const stockErrors = [];
+    for (const item of items) {
+      if (item.product && item.warehouse && item.location && item.quantity > 0) {
+        try {
+          const response = await axios.get(
+            `${API_URL}${API_ENDPOINTS.STOCK_PLACEMENTS}?product=${item.product.product_id}&warehouse=${item.warehouse.warehouse_id}&location=${item.location.id}`
+          );
+          const stockData = response.data;
+  
+          // Check if stockData is an array or a single object
+          const stock = Array.isArray(stockData) ? stockData[0] : stockData;
+  
+          if (!stock) {
+            stockErrors.push(`No stock found for ${item.product.name} in ${item.warehouse.name}`);
+            continue;
+          }
+  
+          const availableStock = (stock.quantity || 0) - (stock.reserved_quantity || 0);
+          console.log(`Available stock for product ${item.product.name}: ${availableStock}`);
+  
+          if (availableStock < item.quantity) {
+            stockErrors.push(
+              `Insufficient stock for ${item.product.name}: ${availableStock} available, ${item.quantity} requested`
+            );
+          }
+        } catch (err) {
+          stockErrors.push(`Error checking stock for ${item.product?.name || "product"} in ${item.warehouse?.name || "warehouse"}`);
+          console.error("Stock check error:", err);
+        }
+      } else {
+        stockErrors.push("Incomplete item details. Please select product, warehouse, and location.");
+      }
+    }
+    return stockErrors;
+  };
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -87,27 +123,44 @@ const PlaceOrder = () => {
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!formData.customer || formData.items.some(item => !item.product || !item.warehouse || !item.location)) {
-      setError("Please fill all required fields.");
+    // Validate required fields
+    if (!formData.customer) {
+      setError("Please select a customer.");
       return;
     }
-
+    const invalidItems = formData.items.filter(
+      (item) => !item.product || !item.warehouse || !item.location || item.quantity < 1
+    );
+    if (invalidItems.length > 0) {
+      setError("All items must have a product, warehouse, location, and valid quantity.");
+      return;
+    }
+  
     setLoading(true);
     setError(null);
     setSuccess(null);
-
+  
+    // Check stock before submitting
+    const stockErrors = await checkStock(formData.items);
+    if (stockErrors.length > 0) {
+      setError(stockErrors.join("; "));
+      setLoading(false);
+      return;
+    }
+  
     const payload = {
       customer: formData.customer.customer_id,
       pos_terminal_id: formData.pos_terminal_id,
       pos_processed: true,
-      items: formData.items.map(item => ({
+      items: formData.items.map((item) => ({
         product: item.product.product_id,
         warehouse: item.warehouse.warehouse_id,
         location: item.location.id,
         quantity: item.quantity,
+        price: item.product.price,
       })),
     };
-
+  
     try {
       const response = await axios.post(`${API_URL}${API_ENDPOINTS.ORDERS}`, payload);
       setSuccess(`Order ${response.data.order_id} created successfully!`);
@@ -118,7 +171,7 @@ const PlaceOrder = () => {
       });
     } catch (err) {
       console.error("Error placing order:", err);
-      setError(err.response?.data?.error || "Failed to place order");
+      setError(err.response?.data?.error || err.response?.data?.detail || "Failed to place order");
     } finally {
       setLoading(false);
     }
@@ -137,7 +190,7 @@ const PlaceOrder = () => {
             <label className="font-semibold text-gray-700">Customer *</label>
             <Dropdown
               value={formData.customer}
-              options={customers.map(c => ({ label: c.full_name || "Unknown", value: c }))}
+              options={customers.map((c) => ({ label: c.full_name || "Unknown", value: c }))}
               onChange={(e) => handleInputChange("customer", e.value)}
               placeholder="Select a customer"
               className="w-full mt-1"
@@ -161,7 +214,7 @@ const PlaceOrder = () => {
                 <label className="font-semibold text-gray-700">Product *</label>
                 <Dropdown
                   value={item.product}
-                  options={products.map(p => ({ label: p.name || "Unknown", value: p }))}
+                  options={products.map((p) => ({ label: p.name || "Unknown", value: p }))}
                   onChange={(e) => handleItemChange(index, "product", e.value)}
                   placeholder="Select a product"
                   className="w-full mt-1"
@@ -172,7 +225,7 @@ const PlaceOrder = () => {
                 <label className="font-semibold text-gray-700">Warehouse *</label>
                 <Dropdown
                   value={item.warehouse}
-                  options={warehouses.map(w => ({ label: w.name || "Unknown", value: w }))}
+                  options={warehouses.map((w) => ({ label: w.name || "Unknown", value: w }))}
                   onChange={(e) => handleItemChange(index, "warehouse", e.value)}
                   placeholder="Select a warehouse"
                   className="w-full mt-1"
@@ -183,7 +236,7 @@ const PlaceOrder = () => {
                 <label className="font-semibold text-gray-700">Location *</label>
                 <Dropdown
                   value={item.location}
-                  options={locations.map(l => ({ label: l.section_name || "Unknown", value: l }))}
+                  options={locations.map((l) => ({ label: l.section_name || "Unknown", value: l }))}
                   onChange={(e) => handleItemChange(index, "location", e.value)}
                   placeholder="Select a location"
                   className="w-full mt-1"

@@ -225,12 +225,15 @@ const Products = () => {
       header: "Image",
       body: (row) =>
         row.image ? (
+          <>
+  
           <img
             src={row.image}
             alt={row.name}
             className="w-16 h-16 object-cover rounded-md"
-            onError={(e) => (e.target.src = "https://via.placeholder.com/150")}
+            onError={(e) => (e.target.src = "")}
           />
+          </>
         ) : (
           "No Image"
         ),

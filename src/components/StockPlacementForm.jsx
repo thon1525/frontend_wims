@@ -1,4 +1,4 @@
-import  { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
@@ -10,11 +10,11 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 axios.defaults.withCredentials = true;
-const API_URL = import.meta.env.VITE_API_URL ;
+const API_URL = import.meta.env.VITE_API_URL;
 const API_ENDPOINTS = {
   WAREHOUSES: "/api/warehouses/",
   PRODUCTS: "/api/products/",
-  LOCATIONS: "/api/warehouse-locations/", // Assuming you have an endpoint for WarehouseLocation
+  LOCATIONS: "/api/warehouse-locations/",
   CATEGORIES: "/api/categories/",
   STOCK_PLACEMENTS: "/api/stock-placements/",
 };
@@ -28,12 +28,12 @@ const STORAGE_TYPE_OPTIONS = [
 
 const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
   const [formData, setFormData] = useState({
-    warehouse: stock?.warehouse || null,
-    product: stock?.product || null,
-    
-    location: stock?.location || null,
-    category: stock?.category || null,
+    warehouse: stock?.warehouse?.warehouse_id || null,
+    product: stock?.product?.product_id || null,
+    location: stock?.location?.id || null,
+    category: stock?.category?.id || null,
     quantity: stock?.quantity || 0,
+    reserved_quantity: stock?.reserved_quantity || 0,
     weight: stock?.weight || 0,
     storage_type: stock?.storage_type || "shelf",
     batch_number: stock?.batch_number || "",
@@ -41,7 +41,6 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
     min_stock_level: stock?.min_stock_level || 0,
     max_stock_level: stock?.max_stock_level || 1000,
   });
-
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -49,13 +48,12 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  // Fetch related data
   const fetchData = useCallback(async (endpoint, setData) => {
     try {
       const response = await axios.get(`${API_URL}${endpoint}`);
-      setData(response.data);
+      setData(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
-      setFormError(err.message || "Failed to fetch data");
+      setFormError(err.message || `Failed to fetch ${endpoint}`);
     }
   }, []);
 
@@ -68,8 +66,8 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
       fetchData(API_ENDPOINTS.CATEGORIES, setCategories),
     ]).finally(() => setLoading(false));
   }, [fetchData]);
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+
+  const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -77,19 +75,41 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
     e.preventDefault();
     setFormError(null);
 
-    // Prepare data for API
+    if (!formData.warehouse || !formData.product || !formData.location || !formData.category) {
+      setFormError("Please fill all required fields.");
+      return;
+    }
+
+    if (formData.quantity < formData.reserved_quantity) {
+      setFormError("Quantity cannot be less than reserved quantity.");
+      return;
+    }
+
+    if (formData.quantity > formData.max_stock_level) {
+      setFormError(`Quantity cannot exceed maximum stock level (${formData.max_stock_level}).`);
+      return;
+    }
+
     const dataToSend = {
-      ...formData,
-      expiry_date: formData.expiry_date
-        ? formData.expiry_date.toISOString().split("T")[0]
-        : null,
+      warehouse: formData.warehouse,
+      product: formData.product,
+      location: formData.location,
+      category: formData.category,
+      quantity: formData.quantity,
+      reserved_quantity: formData.reserved_quantity,
+      weight: formData.weight,
+      storage_type: formData.storage_type,
+      batch_number: formData.batch_number,
+      expiry_date: formData.expiry_date ? formData.expiry_date.toISOString().split("T")[0] : null,
+      min_stock_level: formData.min_stock_level,
+      max_stock_level: formData.max_stock_level,
     };
 
     try {
       setLoading(true);
       await onSave(dataToSend);
     } catch (err) {
-      setFormError(err.message || "Failed to save stock placement");
+      setFormError(err.response?.data?.detail || err.message || "Failed to save stock placement");
     } finally {
       setLoading(false);
     }
@@ -104,108 +124,105 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
         </div>
       )}
       {(error || formError) && (
-        <p className="text-red-500 bg-red-50 p-3 rounded-md">
-          {error || formError}
-        </p>
+        <p className="text-red-500 bg-red-50 p-3 rounded-md">{error || formError}</p>
       )}
 
-      {/* Warehouse */}
       <div className="field">
         <label htmlFor="warehouse" className="block text-gray-700 font-medium mb-1">
-          Warehouse
+          Warehouse *
         </label>
         <Dropdown
           id="warehouse"
           name="warehouse"
           value={formData.warehouse}
-          options={warehouses.map((w) => ({
-            label: w.name,
-            value: w.warehouse_id,
-          }))}
-          onChange={handleChange}
+          options={warehouses.map((w) => ({ label: w.name, value: w.warehouse_id }))}
+          onChange={(e) => handleChange("warehouse", e.value)}
           placeholder="Select a Warehouse"
           required
           className="w-full"
         />
       </div>
 
-      {/* Product */}
       <div className="field">
         <label htmlFor="product" className="block text-gray-700 font-medium mb-1">
-          Product
+          Product *
         </label>
         <Dropdown
           id="product"
           name="product"
           value={formData.product}
-          options={products.map((p) => ({
-            label: p.name,
-            value: p.product_id,
-          }))}
-          onChange={handleChange}
+          options={products.map((p) => ({ label: p.name, value: p.product_id }))}
+          onChange={(e) => handleChange("product", e.value)}
           placeholder="Select a Product"
           required
           className="w-full"
         />
       </div>
 
-      {/* Location */}
       <div className="field">
         <label htmlFor="location" className="block text-gray-700 font-medium mb-1">
-          Location
+          Location *
         </label>
         <Dropdown
           id="location"
           name="location"
           value={formData.location}
           options={locations.map((l) => ({
-            label: `${l.warehouse.name} - ${l.section_name}`,
-            value: l.id, // Assuming WarehouseLocation has an 'id' field
+            label: `${l.warehouse?.name || "Unknown"} - ${l.section_name}`,
+            value: l.id,
           }))}
-          onChange={handleChange}
+          onChange={(e) => handleChange("location", e.value)}
           placeholder="Select a Location"
           required
           className="w-full"
         />
       </div>
 
-      {/* Category */}
       <div className="field">
         <label htmlFor="category" className="block text-gray-700 font-medium mb-1">
-          Category
+          Category *
         </label>
         <Dropdown
           id="category"
           name="category"
           value={formData.category}
-          options={categories.map((c) => ({
-            label: c.name_category,
-            value: c.id, // Assuming Category has an 'id' field
-          }))}
-          onChange={handleChange}
+          options={categories.map((c) => ({ label: c.name_category, value: c.id }))}
+          onChange={(e) => handleChange("category", e.value)}
           placeholder="Select a Category"
           required
           className="w-full"
         />
       </div>
 
-      {/* Quantity */}
       <div className="field">
         <label htmlFor="quantity" className="block text-gray-700 font-medium mb-1">
-          Quantity
+          Quantity *
         </label>
         <InputNumber
           id="quantity"
           name="quantity"
           value={formData.quantity}
-          onValueChange={handleChange}
+          onValueChange={(e) => handleChange("quantity", e.value || 0)}
           min={0}
           required
           className="w-full"
         />
       </div>
 
-      {/* Weight */}
+      <div className="field">
+        <label htmlFor="reserved_quantity" className="block text-gray-700 font-medium mb-1">
+          Reserved Quantity
+        </label>
+        <InputNumber
+          id="reserved_quantity"
+          name="reserved_quantity"
+          value={formData.reserved_quantity}
+          onValueChange={(e) => handleChange("reserved_quantity", e.value || 0)}
+          min={0}
+          className="w-full"
+        />
+      </div>
+
       <div className="field">
         <label htmlFor="weight" className="block text-gray-700 font-medium mb-1">
           Weight
@@ -214,7 +231,7 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
           id="weight"
           name="weight"
           value={formData.weight}
-          onValueChange={handleChange}
+          onValueChange={(e) => handleChange("weight", e.value || 0)}
           min={0}
           mode="decimal"
           minFractionDigits={2}
@@ -223,39 +240,36 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
         />
       </div>
 
-      {/* Storage Type */}
       <div className="field">
         <label htmlFor="storage_type" className="block text-gray-700 font-medium mb-1">
-          Storage Type
+          Storage Type *
         </label>
         <Dropdown
           id="storage_type"
           name="storage_type"
           value={formData.storage_type}
           options={STORAGE_TYPE_OPTIONS}
-          onChange={handleChange}
+          onChange={(e) => handleChange("storage_type", e.value)}
           placeholder="Select Storage Type"
           required
           className="w-full"
         />
       </div>
 
-      {/* Batch Number */}
       <div className="field">
         <label htmlFor="batch_number" className="block text-gray-700 font-medium mb-1">
-          Batch Number
+          Batch Number *
         </label>
         <InputText
           id="batch_number"
           name="batch_number"
           value={formData.batch_number}
-          onChange={handleChange}
+          onChange={(e) => handleChange("batch_number", e.target.value)}
           required
           className="w-full p-2 border-2 border-gray-300 rounded-md"
         />
       </div>
 
-      {/* Expiry Date */}
       <div className="field">
         <label htmlFor="expiry_date" className="block text-gray-700 font-medium mb-1">
           Expiry Date
@@ -264,14 +278,13 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
           id="expiry_date"
           name="expiry_date"
           value={formData.expiry_date}
-          onChange={(e) => setFormData((prev) => ({ ...prev, expiry_date: e.value }))}
+          onChange={(e) => handleChange("expiry_date", e.value)}
           dateFormat="yy-mm-dd"
           showIcon
           className="w-full"
         />
       </div>
 
-      {/* Min Stock Level */}
       <div className="field">
         <label htmlFor="min_stock_level" className="block text-gray-700 font-medium mb-1">
           Minimum Stock Level
@@ -280,13 +293,12 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
           id="min_stock_level"
           name="min_stock_level"
           value={formData.min_stock_level}
-          onValueChange={handleChange}
+          onValueChange={(e) => handleChange("min_stock_level", e.value || 0)}
           min={0}
           className="w-full"
         />
       </div>
 
-      {/* Max Stock Level */}
       <div className="field">
         <label htmlFor="max_stock_level" className="block text-gray-700 font-medium mb-1">
           Maximum Stock Level
@@ -295,13 +307,12 @@ const StockPlacementForm = ({ stock, onSave, onCancel, error }) => {
           id="max_stock_level"
           name="max_stock_level"
           value={formData.max_stock_level}
-          onValueChange={handleChange}
+          onValueChange={(e) => handleChange("max_stock_level", e.value || 0)}
           min={0}
           className="w-full"
         />
       </div>
 
-      {/* Buttons */}
       <div className="flex justify-end gap-2 mt-6">
         <PrimeButton
           label="Cancel"
